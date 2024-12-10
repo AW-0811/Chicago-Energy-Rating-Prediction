@@ -62,18 +62,18 @@ df = df.dropna(subset=['Chicago Energy Rating'], axis=0)
 
 
 
-df = random_imputation(df, 'ZIP Code')
-df = random_imputation(df, 'Community Area')
-df = random_imputation(df, 'Primary Property Type')
+# df = random_imputation(df, 'ZIP Code')
+# df = random_imputation(df, 'Community Area')
+# df = random_imputation(df, 'Primary Property Type')
 
 
-# df = mean_imputation(df, 'Year Built')
-# df = mean_imputation(df, '# of Buildings')
+# # df = mean_imputation(df, 'Year Built')
+# # df = mean_imputation(df, '# of Buildings')
 
-df = mean_imputation(df, 'Gross Floor Area - Buildings (sq ft)')
-df = mean_imputation(df, 'Electricity Use (kBtu)')
-# df = mean_imputation(df, 'Natural Gas Use (kBtu)')
-df = mean_imputation(df, 'Weather Normalized Site EUI (kBtu/sq ft)')
+# df = mean_imputation(df, 'Gross Floor Area - Buildings (sq ft)')
+# df = mean_imputation(df, 'Electricity Use (kBtu)')
+# # df = mean_imputation(df, 'Natural Gas Use (kBtu)')
+# df = mean_imputation(df, 'Weather Normalized Site EUI (kBtu/sq ft)')
 
 df = df.drop('Water Use (kGal)', axis=1)
 df = df.drop('District Steam Use (kBtu)', axis=1)
@@ -107,11 +107,11 @@ df = df.drop('ENERGY STAR Score', axis=1)
 
 df = df.drop('Weather Normalized Source EUI (kBtu/sq ft)', axis=1)
 
-imputer = KNNImputer(n_neighbors=7)
+# imputer = KNNImputer(n_neighbors=7)
 
-# Impute missing values
-dfnotdf = imputer.fit_transform(df)
-df = pd.DataFrame(dfnotdf, columns=df.columns)
+# # Impute missing values
+# dfnotdf = imputer.fit_transform(df)
+# df = pd.DataFrame(dfnotdf, columns=df.columns)
 missing_per_column = df.isnull().sum()
 
 # Count total missing values in the DataFrame
@@ -129,56 +129,105 @@ total_missing = df.isnull().sum().sum()
 Features = df.drop('Chicago Energy Rating', axis=1)
 target = df['Chicago Energy Rating']
 print(target)
-X_train, X_temp, y_train, y_temp = train_test_split(Features, target, test_size=0.2, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+X_train, X_temp, y_train, y_temp = train_test_split(Features, target, test_size=0.1, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.15, random_state=42)
 
-# Feature Scaling
+X_train = random_imputation(X_train, 'ZIP_encoded')
+X_train = random_imputation(X_train, 'Commarea_encoded')
+X_train = random_imputation(X_train, 'Primary Property Type_encoded')
+
+
+# df = mean_imputation(df, 'Year Built')
+# df = mean_imputation(df, '# of Buildings')
+
+X_train = mean_imputation(X_train, 'Gross Floor Area - Buildings (sq ft)')
+X_train = mean_imputation(X_train, 'Electricity Use (kBtu)')
+# df = mean_imputation(df, 'Natural Gas Use (kBtu)')
+X_train = mean_imputation(X_train, 'Weather Normalized Site EUI (kBtu/sq ft)')
+
+
+imputer = KNNImputer(n_neighbors=7)
+
+# Impute missing values
+dfnotdf = imputer.fit_transform(X_train)
+X_train = pd.DataFrame(dfnotdf, columns=X_train.columns)
+
+
+X_val = random_imputation(X_val, 'ZIP_encoded')
+X_val = random_imputation(X_val, 'Commarea_encoded')
+X_val = random_imputation(X_val, 'Primary Property Type_encoded')
+
+
+# df = mean_imputation(df, 'Year Built')
+# df = mean_imputation(df, '# of Buildings')
+
+X_val = mean_imputation(X_val, 'Gross Floor Area - Buildings (sq ft)')
+X_val = mean_imputation(X_val, 'Electricity Use (kBtu)')
+# df = mean_imputation(df, 'Natural Gas Use (kBtu)')
+X_val = mean_imputation(X_val, 'Weather Normalized Site EUI (kBtu/sq ft)')
+
+
+imputer = KNNImputer(n_neighbors=7)
+
+# Impute missing values
+dfnotdfvalid = imputer.fit_transform(X_val)
+X_val = pd.DataFrame(dfnotdfvalid, columns=X_val.columns)
+
+X_test = random_imputation(X_test, 'ZIP_encoded')
+X_test = random_imputation(X_test, 'Commarea_encoded')
+X_test = random_imputation(X_test, 'Primary Property Type_encoded')
+
+
+# df = mean_imputation(df, 'Year Built')
+# df = mean_imputation(df, '# of Buildings')
+
+X_test = mean_imputation(X_test, 'Gross Floor Area - Buildings (sq ft)')
+X_test = mean_imputation(X_test, 'Electricity Use (kBtu)')
+# df = mean_imputation(df, 'Natural Gas Use (kBtu)')
+X_test = mean_imputation(X_test, 'Weather Normalized Site EUI (kBtu/sq ft)')
+
+
+imputer = KNNImputer(n_neighbors=7)
+
+dfnotdftest = imputer.fit_transform(X_test)
+X_test = pd.DataFrame(dfnotdftest, columns=X_test.columns)
+
+
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
-# Define the parameter grid for hyperparameter tuning
 param_grid = {
     "n_estimators": [100, 200, 500, 1500],
     "max_depth": [3, 5, 10, 15],
     "min_samples_split": [2, 5, 10],
     "learning_rate": [0.01, 0.03, 0.1, 0.2],
 }
-# Initialize the GradientBoostingRegressor model
 reg = GradientBoostingRegressor(loss="squared_error", random_state=42)
 
-# Perform GridSearchCV to tune the hyperparameters with verbose
 grid_search = GridSearchCV(estimator=reg, param_grid=param_grid, cv=5, scoring='neg_mean_absolute_error', verbose=2, n_jobs=-1)
 
-# Track the start time for debugging
 print("Starting hyperparameter tuning...")
 grid_search.fit(X_train, y_train)
 
-# Output the best parameters from GridSearchCV
 print("Best parameters from GridSearchCV:", grid_search.best_params_)
 
-# Get the best estimator
 best_model = grid_search.best_estimator_
 
-# Train the best model on the training data
 print("Training best model...")
 best_model.fit(X_train, y_train)
 
-# Validate the model using the validation set
 y_val_pred = best_model.predict(X_val)
 
-# Evaluate the model on the validation set
 mae_val = mean_absolute_error(y_val, y_val_pred)
 r2_val = r2_score(y_val, y_val_pred)
 print(f"Validation MAE: {mae_val:.4f}")
 print(f"Validation R²: {r2_val:.4f}")
 
-# Test the model on the test set
 y_test_pred = best_model.predict(X_test)
 rounded_preds = [round(n*2)/2 for n in y_test_pred]
 
-# Evaluate the model on the test set
 mae_test = mean_absolute_error(y_test, rounded_preds)
 r2_test = r2_score(y_test, rounded_preds)
 print(f"Test MAE: {mae_test:.4f}")
